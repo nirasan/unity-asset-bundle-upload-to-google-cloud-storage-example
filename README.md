@@ -6,6 +6,7 @@
   * See also https://developers.google.com/identity/protocols/OAuth2ServiceAccount#creatinganaccount .
   * Create project if needed.
 * Download P12 private key file.
+  * And make a note of keys password.
   * And save p12 file "Assets" directory.
 * Create google cloud storage budget to be uploaded.
 * Set constants, "keyFile", "keyPassword", "email", and "badgetName".
