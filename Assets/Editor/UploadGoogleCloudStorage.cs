@@ -105,12 +105,11 @@ public class UploadGoogleCloudStorage
 		var url = string.Format (baseUploadUrlFormat, badgetName, filename);
 
 		Debug.Log ("Upload url is " + url);
-
-		var form = new WWWForm ();
+		
 		byte[] fileBytes = File.ReadAllBytes (fileInfo.FullName);
-		form.AddBinaryData ("file", fileBytes, fileInfo.Name, "application/octet-stream");
+		var uploadHandler = new UploadHandlerRaw (fileBytes);
 
-		PostRequest (url, form, headers, (res) => {
+		PostRequest (url, null, uploadHandler, headers, (res) => {
 			Debug.Log ("Success: " + res);
 		});
 	}
@@ -138,13 +137,18 @@ public class UploadGoogleCloudStorage
 		var form = new WWWForm ();
 		form.AddField ("grant_type", @"urn:ietf:params:oauth:grant-type:jwt-bearer");
 		form.AddField ("assertion", GoogleJsonWebToken.Create (email, Application.dataPath + "/" + keyFile, keyPassword));
-		PostRequest (url, form, null, onSuccess);
+		PostRequest (url, form, null, null, onSuccess);
 	}
-
-	public static bool PostRequest (string url, WWWForm form, Dictionary<string, string> headers, Action<string> onSuccess)
+	
+	public static bool PostRequest (string url, WWWForm form, UploadHandler uploadHandler, Dictionary<string, string> headers, Action<string> onSuccess)
 	{
 		using (UnityWebRequest r = UnityWebRequest.Post (url, form))
 		{
+			if (uploadHandler != null)
+			{
+				r.uploadHandler = uploadHandler;
+			}
+
 			if (headers != null)
 			{
 				foreach (var header in headers)
@@ -153,29 +157,34 @@ public class UploadGoogleCloudStorage
 				}
 			}
 
-			var s = r.Send ();
-			long startTick = DateTime.Now.Ticks;
-			while (!s.isDone)
-			{
-				if (DateTime.Now.Ticks > startTick + 10L * 10000000L)
-				{
-					Debug.LogWarning ("Timeout");
-					break;
-				}
-			}
+			return SendPostRequest (r, onSuccess);
+		}
+	}
 
-			if (string.IsNullOrEmpty (r.error))
+	private static bool SendPostRequest (UnityWebRequest r, Action<string> onSuccess)
+	{
+		var s = r.Send ();
+		long startTick = DateTime.Now.Ticks;
+		while (!s.isDone)
+		{
+			if (DateTime.Now.Ticks > startTick + 10L * 10000000L)
 			{
-				Debug.Log ("POST : " + url);
-				Debug.Log (r.downloadHandler.text);
-				if (onSuccess != null) onSuccess (r.downloadHandler.text);
-				return true;
+				Debug.LogWarning ("Timeout");
+				break;
 			}
-			else
-			{
-				Debug.LogWarning ("Error : " + r.error);
-				return false;
-			}
+		}
+
+		if (string.IsNullOrEmpty (r.error))
+		{
+			Debug.Log ("POST : " + r.url);
+			Debug.Log (r.downloadHandler.text);
+			if (onSuccess != null) onSuccess (r.downloadHandler.text);
+			return true;
+		}
+		else
+		{
+			Debug.LogWarning ("Error : " + r.error);
+			return false;
 		}
 	}
 }
