@@ -110,7 +110,36 @@ public class UploadGoogleCloudStorage
 		var uploadHandler = new UploadHandlerRaw (fileBytes);
 
 		PostRequest (url, null, uploadHandler, headers, (res) => {
-			Debug.Log ("Success: " + res);
+			Debug.Log ("Success Upload: " + res);
+			UpdateFileAcl (filename, token);
+		});
+	}
+
+	[Serializable]
+	public class AclRequest
+	{
+		public string entity;
+		public string role;
+	}
+
+	private static void UpdateFileAcl (string filename, string token)
+	{
+		var headers = new Dictionary<string, string> ();
+		headers.Add ("Authorization", "Bearer " + token);
+		headers.Add ("Content-Type", "application/json");
+
+		var baseUrl = @"https://www.googleapis.com/storage/v1/b/{0}/o/{1}/acl";
+		var url = string.Format (baseUrl, AssetConstant.AssetBundleBadgetName, WWW.EscapeURL (filename));
+
+		var json = JsonUtility.ToJson (new AclRequest {
+			entity = "allUsers",
+			role = "READER"
+		});
+		byte[] data = System.Text.Encoding.UTF8.GetBytes (json);
+		var uploadHandler = new UploadHandlerRaw (data);
+
+		PostRequest (url, null, uploadHandler, headers, (res) => {
+			Debug.Log ("Success Update ACL: " + res);
 		});
 	}
 
